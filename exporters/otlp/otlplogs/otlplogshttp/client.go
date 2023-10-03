@@ -21,6 +21,14 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/agoda-com/opentelemetry-logs-go/exporters/otlp/otlplogs/internal"
 	"github.com/agoda-com/opentelemetry-logs-go/exporters/otlp/otlplogs/internal/otlpconfig"
 	"github.com/agoda-com/opentelemetry-logs-go/exporters/otlp/otlplogs/internal/retry"
@@ -29,13 +37,6 @@ import (
 	logspb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"io"
-	"net"
-	"net/http"
-	"net/url"
-	"strconv"
-	"sync"
-	"time"
 )
 
 const contentTypeProto = "application/x-protobuf"
@@ -346,7 +347,8 @@ func (d *httpClient) UploadLogs(ctx context.Context, protoLogs []*logspb.Resourc
 			}
 			return newResponseError(resp.Header)
 		} else {
-			return fmt.Errorf("failed to send to %s: %s", request.URL, resp.Status)
+			body, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("failed to send to %s [%s]: %s", request.URL, body, resp.Status)
 		}
 	})
 }
